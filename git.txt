@@ -1,0 +1,6 @@
+git init
+git add .
+git commit -m "Initial commit for OctalAcademy_Bot"
+git branch -M main
+git remote add origin https://github.com/alallaghy92/OctalAcademyBot.git
+git push -u origin main
