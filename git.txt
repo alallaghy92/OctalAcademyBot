@@ -8,7 +8,7 @@ git add .
 git commit -m "🔰 أول رفع لمشروع البوت"
 
 # ربط المستودع المحلي بمستودع GitHub (غيّر الرابط حسب مستودعك)
-git remote add origin https://github.com/USERNAME/REPO_NAME.git
+git remote add origin https://github.com/alallaghy92/OctalAcademyBot.git
 
 # رفع الملفات إلى الفرع الرئيسي
 git push -u origin main
