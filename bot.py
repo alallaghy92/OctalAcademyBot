@@ -1,17 +1,26 @@
 import os
 import traceback
+from datetime import datetime
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # جلب الإعدادات من Environment Variables
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 PDF_ROOT = os.environ.get("PDF_ROOT", "PDF_Files")
 DEVELOPER_USERNAME = os.environ.get("DEVELOPER_USERNAME", "@mr_alallaghy")
 
+# 👇 ضع هنا معرف المستخدم أو المجموعة اللي ترسل له التذكيرات
+TARGET_CHAT_ID = 123456789  # ← غيّره حسب حالتك
+
+# رسائل التذكير
+MORNING_AZKAR = "🌞 أذكار الصباح:\n\n🕋 أصبحنا وأصبح الملك لله..."
+EVENING_AZKAR = "🌙 أذكار المساء:\n\n🕋 أمسينا وأمسى الملك لله..."
+SURAT_AL_KAHF = "📖 تذكير بقراءة سورة الكهف اليوم.\n\nقال النبي ﷺ: \"من قرأ سورة الكهف يوم الجمعة أضاء له من النور ما بين الجمعتين\""
+
 if not BOT_TOKEN:
     raise ValueError("❌ BOT_TOKEN غير موجود في متغيرات البيئة!")
 
-# ترتيب الأزرار في الصفوف
 def arrange_buttons(items, prefix):
     keyboard = []
     temp = []
@@ -25,14 +34,12 @@ def arrange_buttons(items, prefix):
         keyboard.append([temp[0]])
     return keyboard
 
-# إضافة زر تواصل مع المطور وزر رجوع
 def add_contact_and_back(keyboard, back_callback=None):
     if back_callback:
         keyboard.append([InlineKeyboardButton("🔙 رجوع", callback_data=back_callback)])
     keyboard.append([InlineKeyboardButton("📩 تواصل مع المطور", url=f"https://t.me/{DEVELOPER_USERNAME[1:]}")])
     return keyboard
 
-# بدء البوت
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not os.path.exists(PDF_ROOT):
         await update.message.reply_text("❌ لم يتم العثور على مجلد PDF_Files في نفس مسار البوت.")
@@ -47,7 +54,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["sections"] = sections
 
-    # 💫 الرسالة الأدبية المضافة
     welcome_message = (
         "🌟 مرحبًا بك في بوت أكادمية أوكتال .\n\n"
         "🌟 نحن هنا لمساعدتك في البحث عن المقررات الدراسية لجميع المواد .\n\n"
@@ -62,9 +68,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = add_contact_and_back(keyboard)
     await update.message.reply_text(welcome_message, reply_markup=InlineKeyboardMarkup(keyboard))
 
-# التعامل مع أزرار التصفح
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    import traceback
     try:
         query = update.callback_query
         await query.answer()
@@ -139,12 +143,26 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print("❌ خطأ:", e)
         traceback.print_exc()
 
-# تشغيل البوت
+def schedule_reminders(app):
+    scheduler = BackgroundScheduler()
+
+    scheduler.add_job(lambda: app.bot.send_message(chat_id=TARGET_CHAT_ID, text=MORNING_AZKAR),
+                      trigger='cron', hour=8, minute=0)
+
+    scheduler.add_job(lambda: app.bot.send_message(chat_id=TARGET_CHAT_ID, text=EVENING_AZKAR),
+                      trigger='cron', hour=17, minute=0)
+
+    scheduler.add_job(lambda: app.bot.send_message(chat_id=TARGET_CHAT_ID, text=SURAT_AL_KAHF),
+                      trigger='cron', day_of_week='fri', hour=8, minute=0)
+
+    scheduler.start()
+
 def main():
     print("🚀 جاري تشغيل البوت...")
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_callback))
+    schedule_reminders(app)
     print("✅ تم تشغيل البوت بنجاح، يمكنك الآن مراسلته على تيليجرام.")
     app.run_polling()
 
