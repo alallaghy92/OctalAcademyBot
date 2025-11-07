@@ -72,21 +72,10 @@ def add_contact_and_back(keyboard, back_callback=None):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """عند تنفيذ /start"""
     user_id = update.effective_user.id
-    add_user(user_id)  # 👈 حفظ معرف المستخدم الجديد
+    add_user(user_id)
+    print(f"✅ المستخدم {user_id} بدأ المحادثة.")
 
-    if not os.path.exists(PDF_ROOT):
-        await update.message.reply_text("❌ لم يتم العثور على مجلد PDF_Files في نفس مسار البوت.")
-        return
-
-    sections = os.listdir(PDF_ROOT)
-    sections = [s for s in sections if os.path.isdir(os.path.join(PDF_ROOT, s))]
-
-    if not sections:
-        await update.message.reply_text("📂 لا توجد أقسام داخل مجلد PDF_Files.")
-        return
-
-    context.user_data["sections"] = sections
-
+    # رسالة الترحيب
     welcome_message = (
         "🌟 مرحبًا بك في بوت أكادمية أوكتال .\n\n"
         "🌟 نحن هنا لمساعدتك في البحث عن المقررات الدراسية لجميع المواد .\n\n"
@@ -97,9 +86,28 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📘 اختر القسم العلمي لبدء التصفح:"
     )
 
+    # تحقق من المجلدات
+    if not os.path.exists(PDF_ROOT):
+        await context.bot.send_message(chat_id=user_id, text="❌ لم يتم العثور على مجلد PDF_Files في نفس مسار البوت.")
+        await context.bot.send_message(chat_id=user_id, text=welcome_message)
+        return
+
+    sections = [s for s in os.listdir(PDF_ROOT) if os.path.isdir(os.path.join(PDF_ROOT, s))]
+    if not sections:
+        await context.bot.send_message(chat_id=user_id, text="📂 لا توجد أقسام داخل مجلد PDF_Files.")
+        await context.bot.send_message(chat_id=user_id, text=welcome_message)
+        return
+
+    context.user_data["sections"] = sections
+
     keyboard = arrange_buttons(sections, "section")
     keyboard = add_contact_and_back(keyboard)
-    await update.message.reply_text(welcome_message, reply_markup=InlineKeyboardMarkup(keyboard))
+
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=welcome_message,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
